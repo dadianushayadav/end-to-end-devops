@@ -7,6 +7,7 @@ pipeline {
     }
 
     stages {
+
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
@@ -25,6 +26,30 @@ pipeline {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Upload to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        mvn org.apache.maven.plugins:maven-deploy-plugin:3.1.3:deploy-file \
+                        -DgroupId=com.devops \
+                        -DartifactId=devops-portal \
+                        -Dversion=0.0.1-SNAPSHOT \
+                        -Dpackaging=jar \
+                        -Dfile=target/devops-portal-0.0.1-SNAPSHOT.jar \
+                        -DrepositoryId=nexus-snapshots \
+                        -Durl=http://54.196.33.180:8081/repository/maven-snapshots/ \
+                        -DgeneratePom=true \
+                        -Dusername=$NEXUS_USER \
+                        -Dpassword=$NEXUS_PASS
+                    '''
                 }
             }
         }
