@@ -9,9 +9,15 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh 'java -version'
-                sh 'mvn -version'
                 sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube-Server') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=devops-portal'
+                }
             }
         }
     }
