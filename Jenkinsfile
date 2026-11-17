@@ -17,7 +17,10 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube-Server') {
-                    sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar -Dsonar.projectKey=devops-portal'
+                    sh '''
+                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar \
+                        -Dsonar.projectKey=devops-portal
+                    '''
                 }
             }
         }
@@ -38,7 +41,22 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                        mvn org.apache.maven.plugins:maven-deploy-plugin:3.1.3:deploy-file \
+                        set +x
+
+                        cat > /tmp/nexus-settings.xml <<EOF
+<settings>
+    <servers>
+        <server>
+            <id>nexus-snapshots</id>
+            <username>${NEXUS_USER}</username>
+            <password>${NEXUS_PASS}</password>
+        </server>
+                    </servers>
+</settings>
+EOF
+
+                        mvn -s /tmp/nexus-settings.xml \
+                        org.apache.maven.plugins:maven-deploy-plugin:3.1.3:deploy-file \
                         -DgroupId=com.devops \
                         -DartifactId=devops-portal \
                         -Dversion=0.0.1-SNAPSHOT \
@@ -46,9 +64,9 @@ pipeline {
                         -Dfile=target/devops-portal-0.0.1-SNAPSHOT.jar \
                         -DrepositoryId=nexus-snapshots \
                         -Durl=http://54.196.33.180:8081/repository/maven-snapshots/ \
-                        -DgeneratePom=true \
-                        -Dusername=$NEXUS_USER \
-                        -Dpassword=$NEXUS_PASS
+                        -DgeneratePom=true
+
+                        rm -f /tmp/nexus-settings.xml
                     '''
                 }
             }
